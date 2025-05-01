@@ -11,6 +11,7 @@ import {
   Settings,
   Star,
   Video,
+  Globe,
 } from "lucide-react";
 
 import { NavMain } from "./nav-main";
@@ -46,7 +47,8 @@ const data = {
       url: "#",
       icon: Video,
       items: [
-        { title: "Podcast to Shorts", url: "#", isActive: true },
+        { title: "Podcast to Shorts", url: "/dashboard", isActive: true },
+        { title: "Translation", url: "/translate", icon: Globe },
         { title: "My Shorts", url: "#" },
         { title: "Templates", url: "#" },
       ],

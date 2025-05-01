@@ -13,6 +13,18 @@ def extractAudio(video_path):
     except Exception as e:
         print(f"An error occurred while extracting audio: {e}")
         return None
+    
+def extractAudioDubbed(video_path, id):
+    try:
+        video_clip = VideoFileClip(video_path)
+        audio_path = f"media/dubbed/audio_{id}.wav"
+        video_clip.audio.write_audiofile(audio_path)
+        video_clip.close()
+        print(f"Extracted audio to: {audio_path}")
+        return audio_path
+    except Exception as e:
+        print(f"An error occurred while extracting audio: {e}")
+        return None
 
 
 def crop_video(input_file, output_file, start_time, end_time):
