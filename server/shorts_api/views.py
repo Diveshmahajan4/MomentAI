@@ -20,13 +20,15 @@ class ShortsGeneratorView(APIView):
             url = serializer.validated_data['url']
             username = serializer.validated_data['username']
             num_shorts = serializer.validated_data.get('num_shorts', 1)
+            add_captions = serializer.validated_data.get('add_captions', True)
             
             # Create a new video processing record
             video_processing = VideoProcessing.objects.create(
                 youtube_url=url,
                 username=username,
                 num_shorts=num_shorts,
-                status='PENDING'
+                status='PENDING',
+                add_captions=add_captions
             )
             
             # Start processing in the background

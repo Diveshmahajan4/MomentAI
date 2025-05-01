@@ -1,18 +1,28 @@
-"use client"
+"use client";
 
-import React, { useState } from "react"
-import { BookOpen, Command, History, Home, Library, Mic, Settings, Star, Video } from "lucide-react"
+import React, { useState } from "react";
+import {
+  BookOpen,
+  Command,
+  History,
+  Home,
+  Library,
+  Mic,
+  Settings,
+  Star,
+  Video,
+} from "lucide-react";
 
-import { NavMain } from "./nav-main"
-import { NavProjects } from "./nav-projects"
-import { NavSecondary } from "./nav-secondary"
-import { NavUser } from "./nav-user"
+import { NavMain } from "./nav-main";
+import { NavProjects } from "./nav-projects";
+import { NavSecondary } from "./nav-secondary";
+import { NavUser } from "./nav-user";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
 const data = {
   user: {
@@ -44,7 +54,7 @@ const data = {
     {
       title: "Library",
       url: "#",
-      
+
       icon: Library,
       items: [
         { title: "Podcasts", url: "#" },
@@ -87,14 +97,26 @@ const data = {
       icon: History,
     },
   ],
-}
+};
 
-export function AppSidebar({ uploadedVideos = [], ...props }: React.ComponentProps<typeof Sidebar> & { uploadedVideos?: { id: number, name: string, date: string }[] }) {
-  const [showHistory, setShowHistory] = useState(false)
+export function AppSidebar({
+  uploadedVideos = [],
+  user,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & {
+  uploadedVideos?: { id: number; name: string; date: string }[];
+  user: {
+    name: string
+    email: string
+    avatar: string
+  }
+}) {
+  console.log("User in sidebar: ", user);
+  const [showHistory, setShowHistory] = useState(false);
 
   const handleHistoryClick = () => {
-    setShowHistory(!showHistory)
-  }
+    setShowHistory(!showHistory);
+  };
 
   return (
     <Sidebar variant="inset" {...props}>
@@ -114,7 +136,10 @@ export function AppSidebar({ uploadedVideos = [], ...props }: React.ComponentPro
         {!showHistory ? (
           <>
             <NavMain items={data.navMain} />
-            <NavProjects projects={data.projects} onHistoryClick={handleHistoryClick} />
+            <NavProjects
+              projects={data.projects}
+              onHistoryClick={handleHistoryClick}
+            />
             <NavSecondary items={data.navSecondary} className="mt-auto" />
           </>
         ) : (
@@ -144,8 +169,8 @@ export function AppSidebar({ uploadedVideos = [], ...props }: React.ComponentPro
       </SidebarContent>
 
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

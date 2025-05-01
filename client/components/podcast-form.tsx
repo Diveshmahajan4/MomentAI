@@ -11,6 +11,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/components/ui/use-toast"
+import { Switch } from "@/components/ui/switch"
 
 const youtubeUrlSchema = z.object({
   youtubeUrl: z
@@ -29,6 +30,7 @@ const youtubeUrlSchema = z.object({
       },
       { message: "Please enter a valid YouTube URL" },
     ),
+  addCaptions: z.boolean().default(true),
 })
 
 const fileUploadSchema = z.object({
@@ -45,10 +47,11 @@ const fileUploadSchema = z.object({
       },
       { message: "File must be in MP4, AVI, or MOV format" },
     ),
+  addCaptions: z.boolean().default(true),
 })
 
 interface PodcastFormProps {
-  onSubmit: (url: string, isYoutubeUrl: boolean) => Promise<void>;
+  onSubmit: (url: string, isYoutubeUrl: boolean, addCaptions: boolean) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -60,22 +63,24 @@ export function PodcastForm({ onSubmit, isLoading }: PodcastFormProps) {
     resolver: zodResolver(youtubeUrlSchema),
     defaultValues: {
       youtubeUrl: "",
+      addCaptions: true,
     },
   })
 
   const fileForm = useForm<z.infer<typeof fileUploadSchema>>({
     resolver: zodResolver(fileUploadSchema),
+    defaultValues: {
+      addCaptions: true,
+    },
   })
 
   async function onYoutubeSubmit(values: z.infer<typeof youtubeUrlSchema>) {
-    await onSubmit(values.youtubeUrl, true);
+    await onSubmit(values.youtubeUrl, true, values.addCaptions);
   }
 
   async function onFileSubmit(values: z.infer<typeof fileUploadSchema>) {
-    // For file upload, you'd typically use FormData to upload the file
-    // But for this example, we're just passing the file name
     const fileURL = URL.createObjectURL(values.file[0]);
-    await onSubmit(fileURL, false);
+    await onSubmit(fileURL, false, values.addCaptions);
   }
 
   return (
@@ -117,6 +122,27 @@ export function PodcastForm({ onSubmit, isLoading }: PodcastFormProps) {
                   </FormItem>
                 )}
               />
+              
+              <FormField
+                control={youtubeForm.control}
+                name="addCaptions"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Add Captions</FormLabel>
+                      <FormDescription>
+                        Automatically add captions to your shorts. Captions are generated using speech recognition and highlight words as they are spoken.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
             </form>
           </Form>
         </TabsContent>
@@ -154,6 +180,27 @@ export function PodcastForm({ onSubmit, isLoading }: PodcastFormProps) {
                     </FormControl>
                     <FormDescription>Upload a video file (MP4, AVI, MOV, max 20MB)</FormDescription>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={fileForm.control}
+                name="addCaptions"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Add Captions</FormLabel>
+                      <FormDescription>
+                        Automatically add captions to your shorts. Captions are generated using speech recognition and highlight words as they are spoken.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />

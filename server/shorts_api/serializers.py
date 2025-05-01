@@ -18,4 +18,5 @@ class VideoProcessingSerializer(serializers.ModelSerializer):
 class VideoRequestSerializer(serializers.Serializer):
     url = serializers.URLField(required=True)
     username = serializers.CharField(required=True, max_length=100)
-    num_shorts = serializers.IntegerField(required=False, default=1, min_value=1, max_value=5) 
+    num_shorts = serializers.IntegerField(required=False, default=1, min_value=1, max_value=5)
+    add_captions = serializers.BooleanField(required=False, default=True) 

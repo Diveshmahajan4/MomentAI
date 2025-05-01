@@ -14,3 +14,5 @@ venv/
 
 # Environment variables
 .env
+
+videos

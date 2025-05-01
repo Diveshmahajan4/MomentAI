@@ -18,11 +18,6 @@ def upload_to_cloudinary(file_path, public_id_prefix='shorts'):
         api_key = os.getenv('CLOUDINARY_API_KEY')
         api_secret = os.getenv('CLOUDINARY_API_SECRET')
         
-        # Debug logging
-        logger.info(f"Direct env - Cloudinary cloud_name: {cloud_name}")
-        logger.info(f"Direct env - Cloudinary API key: {api_key}")
-        logger.info(f"Direct env - Cloudinary API secret: {api_secret[:5]}..." if api_secret else 'None')
-        
         # Configure cloudinary with direct env vars
         cloudinary.config(
             cloud_name=cloud_name,
@@ -57,6 +52,8 @@ def upload_to_cloudinary(file_path, public_id_prefix='shorts'):
         logger.error(f"Cloudinary upload error: {str(e)}")
         return None
 
+
+## For time being we are not using supabase.
 def update_supabase(username, youtube_url, cloudinary_urls):
     """
     Update the Supabase database with the video information
@@ -71,11 +68,6 @@ def update_supabase(username, youtube_url, cloudinary_urls):
         supabase_url = os.getenv('SUPABASE_URL')
         supabase_key = os.getenv('SUPABASE_KEY')
         supabase_table = os.getenv('SUPABASE_TABLE', 'shorts')
-        
-        # Debug logging
-        logger.info(f"Direct env - Supabase URL: {supabase_url}")
-        logger.info(f"Direct env - Supabase key: {supabase_key[:10]}..." if supabase_key else 'None')
-        logger.info(f"Direct env - Supabase table: {supabase_table}")
         
         # Create Supabase client with direct env vars
         supabase = create_client(supabase_url, supabase_key)

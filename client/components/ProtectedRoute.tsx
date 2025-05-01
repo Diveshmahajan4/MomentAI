@@ -18,7 +18,7 @@ export default function ProtectedRoute({ children }) {
         router.push("/login");
       } else if (session && pathname === "/") {
         // If authenticated and on home page, redirect to dashboard
-        router.push("/dashboard");
+        // router.push("/dashboard");
       }
       // Otherwise, allow navigation to any authenticated route
     }

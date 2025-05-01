@@ -23,6 +23,7 @@ class VideoProcessing(models.Model):
     error_message = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    add_captions = models.BooleanField(default=True)
     
     def __str__(self):
         return f"Video Processing: {self.username} - {self.youtube_url} - {self.status}"

@@ -51,6 +51,11 @@ interface ProcessingData {
 
 export default function HistoryPage() {
   const [isLoading, setIsLoading] = useState(true)
+  const [parsedUser, setParsedUser] = useState<User>({
+      name: "John Doe",
+      email: "john@example.com",
+      avatar: "/placeholder.svg?height=32&width=32",
+  })
   const [userVideos, setUserVideos] = useState<ProcessingData[]>([])
   const [username, setUsername] = useState("")
   const { toast } = useToast()
@@ -65,6 +70,12 @@ export default function HistoryPage() {
         } = await supabase.auth.getUser();
         
         if (user) {
+          const parsedUser :User = {
+            name: user.user_metadata?.full_name ?? "Jane Doe",
+            email: user.email ?? "janedoe@gmail.com",
+            avatar: user.user_metadata?.avatar_url ?? '/default-avatar.png',
+          }
+          setParsedUser(parsedUser);
           const userEmail = user.email || "Unknown User";
           setUsername(userEmail);
           
@@ -213,7 +224,7 @@ export default function HistoryPage() {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar user={parsedUser} />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b">
           <div className="flex items-center gap-2 px-4">

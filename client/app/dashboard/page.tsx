@@ -33,6 +33,12 @@ interface ProcessingData {
   updated_at: string
 }
 
+interface User {
+  name: string
+  email: string
+  avatar: string
+} 
+
 interface ApiResponse {
   message: string
   processing: ProcessingData
@@ -44,6 +50,11 @@ export default function Page() {
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [processingStatus, setProcessingStatus] = useState<string | null>(null)
   const [username, setUsername] = useState("")
+  const [parsedUser, setParsedUser] = useState<User>({
+    name: "John Doe",
+    email: "john@example.com",
+    avatar: "/placeholder.svg?height=32&width=32",
+  })
   const [userVideos, setUserVideos] = useState<ProcessingData[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(true)
   const { toast } = useToast()
@@ -59,6 +70,13 @@ export default function Page() {
         } = await supabase.auth.getUser();
         
         if (user) {
+          console.log("User fetched:", user);
+          const parsedUser :User = {
+            name: user.user_metadata?.full_name ?? "Jane Doe",
+            email: user.email ?? "janedoe@gmail.com",
+            avatar: user.user_metadata?.avatar_url ?? '/default-avatar.png',
+          }
+          setParsedUser(parsedUser);
           const userEmail = user.email || "Unknown User";
           setUsername(userEmail);
           
@@ -214,7 +232,7 @@ export default function Page() {
     return () => clearInterval(interval);
   }, [processingId, processingStatus, toast]);
 
-  const handlePodcastSubmit = async (url: string, isYoutubeUrl: boolean) => {
+  const handlePodcastSubmit = async (url: string, isYoutubeUrl: boolean, addCaptions: boolean) => {
     setIsLoading(true)
     
     try {
@@ -226,7 +244,8 @@ export default function Page() {
         body: JSON.stringify({
           url: url,
           username: username,
-          num_shorts: 2,
+          num_shorts: 1,
+          add_captions: addCaptions,
         }),
       })
   
@@ -237,10 +256,7 @@ export default function Page() {
         setApiResponse(data)
         setProcessingId(data.processing.id)
         setProcessingStatus(data.processing.status)
-        
-        // Add to our user videos right away
         setUserVideos(prevVideos => [data.processing, ...prevVideos]);
-        
         toast({
           title: 'Processing started',
           description: `Started processing ${data.processing.num_shorts} shorts from your podcast`,
@@ -276,7 +292,7 @@ export default function Page() {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar user={parsedUser}/>
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b">
           <div className="flex items-center gap-2 px-4 w-full">

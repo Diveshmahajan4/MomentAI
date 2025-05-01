@@ -7,10 +7,11 @@ from Components.Edit import extractAudio, crop_video
 from Components.Transcription import transcribeAudio
 from Components.LanguageTasks import GetHighlight
 from Components.FaceCrop import crop_to_vertical, combine_videos
+from Components.GenerateCaptions import add_captions
 
 def ensure_directories():
     """Ensure all necessary directories exist"""
-    directories = ['media', 'videos']
+    directories = ['media', 'videos', 'media/captioned']
     for directory in directories:
         if not os.path.exists(directory):
             os.makedirs(directory)
@@ -68,7 +69,42 @@ def process_video_task(video_processing_id):
             
             # If we get here, all uploads were successful
             video_processing.status = 'COMPLETED'
+            video_processing.add_captions = "True"
             video_processing.save()
+             # Add captions to the video if enabled
+            if video_processing.add_captions:
+                try:
+                    captioned_path = f"media/captioned/final_{video_processing_id}_{i}_captioned.mp4"
+                    
+                    # Generate captions using the local Whisper model for better accuracy
+                    add_captions(
+                        final_path,
+                        captioned_path,
+                        font="PoetsenOne-Regular.ttf",
+                        font_size=30,
+                        font_color="white",
+                        stroke_width=2,
+                        stroke_color="black",
+                        highlight_current_word=True,
+                        word_highlight_color="#29BFFF",
+                        line_count=2,
+                        padding=40,
+                        shadow_strength=1.0,
+                        shadow_blur=0.1,
+                        use_local_whisper=True,
+                        print_info=True
+                    )
+                    
+                    # Use the captioned video if it was created successfully
+                    if os.path.exists(captioned_path):
+                        final_path = captioned_path
+                        print(f"Successfully added captions to short {i+1}")
+                    else:
+                        print(f"Failed to add captions to short {i+1}, using original video")
+                except Exception as e:
+                    print(f"Error adding captions to short {i+1}: {str(e)}, using original video")
+            else:
+                print(f"Captions disabled for this processing task, skipping caption generation")
             
             # Update Supabase with all URLs
             if video_processing.cloudinary_urls:
@@ -79,6 +115,7 @@ def process_video_task(video_processing_id):
                     urls
                 )
             return
+        
         else:
             # Download the video
             vid = download_youtube_video(video_processing.youtube_url)
@@ -137,6 +174,41 @@ def process_video_task(video_processing_id):
                 final_path = f"media/final_{video_processing_id}_{i}.mp4"
                 combine_videos(output, cropped, final_path)
                 
+                # Add captions to the video if enabled
+                if video_processing.add_captions:
+                    try:
+                        captioned_path = f"media/captioned/final_{video_processing_id}_{i}_captioned.mp4"
+                        
+                        # Generate captions using the local Whisper model for better accuracy
+                        add_captions(
+                            final_path,
+                            captioned_path,
+                            font="PoetsenOne-Regular.ttf",
+                            font_size=100,
+                            font_color="white",
+                            stroke_width=2,
+                            stroke_color="black",
+                            highlight_current_word=True,
+                            word_highlight_color="#29BFFF",
+                            line_count=2,
+                            padding=40,
+                            shadow_strength=1.0,
+                            shadow_blur=0.1,
+                            use_local_whisper=True,
+                            print_info=True
+                        )
+                        
+                        # Use the captioned video if it was created successfully
+                        if os.path.exists(captioned_path):
+                            final_path = captioned_path
+                            print(f"Successfully added captions to short {i+1}")
+                        else:
+                            print(f"Failed to add captions to short {i+1}, using original video")
+                    except Exception as e:
+                        print(f"Error adding captions to short {i+1}: {str(e)}, using original video")
+                else:
+                    print(f"Captions disabled for this processing task, skipping caption generation")
+                
                 # Upload to Cloudinary
                 upload_result = upload_to_cloudinary(final_path, f"user_{video_processing.username}_{i}")
                 if upload_result:
@@ -151,13 +223,13 @@ def process_video_task(video_processing_id):
                 video_processing.status = 'COMPLETED'
                 video_processing.save()
                 
-                # Update Supabase with all URLs
-                urls = [item['url'] for item in video_processing.cloudinary_urls]
-                update_supabase(
-                    video_processing.username,
-                    video_processing.youtube_url,
-                    urls
-                )
+                # # Update Supabase with all URLs
+                # urls = [item['url'] for item in video_processing.cloudinary_urls]
+                # update_supabase(
+                #     video_processing.username,
+                #     video_processing.youtube_url,
+                #     urls
+                # )
                 return
             else:
                 video_processing.error_message = "Failed to create any shorts"
