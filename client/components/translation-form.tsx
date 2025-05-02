@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { Loader2, Upload, Globe, Youtube } from "lucide-react"
+import { useSearchParams } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -61,17 +62,26 @@ interface TranslationFormProps {
 
 export function TranslationForm({ onSubmit, isLoading }: TranslationFormProps) {
   const { toast } = useToast()
+  const searchParams = useSearchParams()
+  const videoUrlFromParams = searchParams.get('videoUrl') || ""
 
   const form = useForm<z.infer<typeof translationSchema>>({
     resolver: zodResolver(translationSchema),
     defaultValues: {
-      videoUrl: "",
+      videoUrl: videoUrlFromParams,
       sourceLanguage: "English",
       targetLanguage: "Hindi",
       voice: "alloy",
       addCaptions: true,
     },
   })
+
+  // Update the form when videoUrlFromParams changes
+  React.useEffect(() => {
+    if (videoUrlFromParams) {
+      form.setValue('videoUrl', videoUrlFromParams)
+    }
+  }, [videoUrlFromParams, form])
 
   async function handleSubmit(values: z.infer<typeof translationSchema>) {
     await onSubmit(

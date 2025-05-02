@@ -34,45 +34,19 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/dashboard",
       icon: Home,
       isActive: true,
-      items: [
-        { title: "Overview", url: "#" },
-        { title: "Analytics", url: "#" },
-      ],
     },
     {
-      title: "Content",
-      url: "#",
+      title: "Dubbing",
+      url: "/translate",
       icon: Video,
-      items: [
-        { title: "Podcast to Shorts", url: "/dashboard", isActive: true },
-        { title: "Translation", url: "/translate", icon: Globe },
-        { title: "My Shorts", url: "#" },
-        { title: "Templates", url: "#" },
-      ],
     },
     {
-      title: "Library",
-      url: "#",
-
+      title: "History",
+      url: "/dashboard/history",
       icon: Library,
-      items: [
-        { title: "Podcasts", url: "#" },
-        { title: "Uploads", url: "#" },
-        { title: "Favorites", url: "#" },
-      ],
-    },
-    {
-      title: "Settings",
-      url: "#",
-      icon: Settings,
-      items: [
-        { title: "Account", url: "#" },
-        { title: "Preferences", url: "#" },
-        { title: "Billing", url: "#" },
-      ],
     },
   ],
   navSecondary: [
@@ -92,12 +66,7 @@ const data = {
       name: "Saved Clips",
       url: "#",
       icon: Star,
-    },
-    {
-      name: "History",
-      url: "#",
-      icon: History,
-    },
+    }
   ],
 };
 
@@ -135,7 +104,6 @@ export function AppSidebar({
       </SidebarHeader>
 
       <SidebarContent>
-        {!showHistory ? (
           <>
             <NavMain items={data.navMain} />
             <NavProjects
@@ -144,30 +112,6 @@ export function AppSidebar({
             />
             <NavSecondary items={data.navSecondary} className="mt-auto" />
           </>
-        ) : (
-          <div className="p-4">
-            <h2 className="text-lg font-bold mb-3">Upload History</h2>
-            {uploadedVideos.length > 0 ? (
-              <ul className="space-y-2">
-                {uploadedVideos.map((video) => (
-                  <li key={video.id} className="border p-2 rounded-md">
-                    <span className="font-medium">{video.name}</span>
-                    <br />
-                    <span className="text-xs text-gray-500">{video.date}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-500">No videos uploaded yet.</p>
-            )}
-            <button
-              onClick={handleHistoryClick}
-              className="mt-4 w-full bg-blue-500 text-white p-2 rounded-md"
-            >
-              Back to Sidebar
-            </button>
-          </div>
-        )}
       </SidebarContent>
 
       <SidebarFooter>

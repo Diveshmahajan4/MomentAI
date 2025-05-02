@@ -227,7 +227,7 @@ export default function Page() {
       } catch (error) {
         console.error('Error checking status:', error);
       }
-    }, 5000); // Check every 5 seconds
+    }, 5000); 
 
     return () => clearInterval(interval);
   }, [processingId, processingStatus, toast]);
@@ -338,19 +338,6 @@ export default function Page() {
                 )}
                 {transformedApiResponse && (
                   <div className="mt-6">
-                    <h2 className="text-xl font-semibold mb-4">
-                      {idFromUrl ? "Selected Video" : "Most Recent Video"}
-                    </h2>
-                    <div className="flex justify-end mb-4">
-                      {apiResponse && apiResponse.processing.cloudinary_urls && (
-                        <Button asChild variant="outline" size="sm">
-                          <Link href={`/dashboard/edit?id=${apiResponse.processing.id}`}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit Video
-                          </Link>
-                        </Button>
-                      )}
-                    </div>
                     <ReelsResults apiResponse={transformedApiResponse} />
                   </div>
                 )}

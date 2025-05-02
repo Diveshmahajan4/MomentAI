@@ -78,7 +78,7 @@ export function TranslationResults({ dubbing, isLoading, onRetry }: TranslationR
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="flex-col justify-center items-center">
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
@@ -90,22 +90,22 @@ export function TranslationResults({ dubbing, isLoading, onRetry }: TranslationR
                 </Badge>
               </CardTitle>
               <CardDescription>
-                {dubbing.source_language} to {dubbing.target_language} using {dubbing.voice} voice • 
+                {dubbing.source_language} to {dubbing.target_language} using {dubbing.voice} voice •
                 {dubbing.updated_at ? ` ${formatDistanceToNow(new Date(dubbing.updated_at), { addSuffix: true })}` : ''}
               </CardDescription>
             </div>
             {dubbing.status === 'COMPLETED' && (
               <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
+                <Button
+                  size="sm"
+                  variant="outline"
                   onClick={() => handleShare(dubbing.cloudinary_urls[0].url)}
                 >
                   <Share2 className="h-4 w-4 mr-2" />
                   Share
                 </Button>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   onClick={() => handleDownload(dubbing.cloudinary_urls[0].url)}
                 >
                   <Download className="h-4 w-4 mr-2" />
@@ -115,13 +115,13 @@ export function TranslationResults({ dubbing, isLoading, onRetry }: TranslationR
             )}
           </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className=" w-[40%]">
           {dubbing.status === 'COMPLETED' && dubbing.cloudinary_urls?.length > 0 ? (
-            <div className="relative aspect-video overflow-hidden rounded-lg">
-              <video 
-                src={dubbing.cloudinary_urls[0].url} 
-                controls 
-                className="w-full h-auto"
+            <div className="relative w-full aspect-[9/16] overflow-hidden rounded-lg bg-black flex justify-center items-center">
+              <video
+                src={dubbing.cloudinary_urls[0].url}
+                controls
+                className="absolute inset-0 w-full h-full object-cover"
                 poster={`https://res.cloudinary.com/demo/video/upload/w_700/q_auto/l_play,w_100/fl_layer_apply,g_center/${dubbing.cloudinary_urls[0].public_id}.jpg`}
               />
             </div>
@@ -132,9 +132,9 @@ export function TranslationResults({ dubbing, isLoading, onRetry }: TranslationR
                 <h3 className="text-lg font-semibold">Processing Translation</h3>
                 <p className="text-sm text-muted-foreground">
                   {dubbing.status === 'PENDING' ? 'Waiting to start translation...' :
-                   dubbing.status === 'PROCESSING' ? 'Your video is being translated and dubbed...' :
-                   dubbing.status === 'FAILED' ? 'Translation failed. Please try again.' : 
-                   'Processing...'}
+                    dubbing.status === 'PROCESSING' ? 'Your video is being translated and dubbed...' :
+                      dubbing.status === 'FAILED' ? 'Translation failed. Please try again.' :
+                        'Processing...'}
                 </p>
                 {dubbing.status === 'FAILED' && onRetry && (
                   <Button variant="outline" className="mt-4" onClick={onRetry}>
@@ -148,13 +148,13 @@ export function TranslationResults({ dubbing, isLoading, onRetry }: TranslationR
         </CardContent>
         {dubbing.status === 'COMPLETED' && dubbing.cloudinary_urls?.length > 0 && (
           <CardFooter className="p-4 border-t">
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground max-w-sm">
               <span>Original URL: </span>
-              <a 
-                href={dubbing.video_url} 
-                target="_blank" 
+              <a
+                href={dubbing.video_url}
+                target="_blank"
                 rel="noopener noreferrer"
-                className="hover:underline text-blue-500"
+                className="hover:underline text-blue-500 block max-w-full truncate"
               >
                 {dubbing.video_url}
               </a>

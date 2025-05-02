@@ -1,6 +1,13 @@
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from moviepy.editor import VideoFileClip
 import subprocess
+import os
+
+def ensure_directory_exists(directory_path):
+    """Ensure a directory exists, creating it if necessary"""
+    if not os.path.exists(directory_path):
+        os.makedirs(directory_path)
+        print(f"Created directory: {directory_path}")
 
 def extractAudio(video_path):
     try:
@@ -16,14 +23,18 @@ def extractAudio(video_path):
     
 def extractAudioDubbed(video_path, id):
     try:
+        # Ensure the dubbed directory exists
+        dubbed_directory = "media/dubbed"
+        ensure_directory_exists(dubbed_directory)
+        
         video_clip = VideoFileClip(video_path)
-        audio_path = f"media/dubbed/audio_{id}.wav"
+        audio_path = f"{dubbed_directory}/audio_{id}.wav"
         video_clip.audio.write_audiofile(audio_path)
         video_clip.close()
         print(f"Extracted audio to: {audio_path}")
         return audio_path
     except Exception as e:
-        print(f"An error occurred while extracting audio: {e}")
+        print(f"An error occurred while extracting audio for dubbing: {e}")
         return None
 
 

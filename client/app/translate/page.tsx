@@ -301,7 +301,7 @@ export default function TranslatePage() {
             name: `${dubbing.source_language} to ${dubbing.target_language}`,
             date: new Date(dubbing.created_at).toLocaleDateString(),
           }))}
-          className="hidden border-r bg-muted/30 lg:block" 
+          className="hidden border-r lg:block" 
         />
         <div className="flex h-screen flex-col overflow-auto">
           <header className="sticky top-0 z-10 flex h-[57px] items-center gap-1 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 lg:px-8 lg:py-4">

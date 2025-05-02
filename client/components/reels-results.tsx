@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { Play, Share2, Download, Pause, Volume2, VolumeX } from "lucide-react"
+import { Play, Share2, Download, Pause, Volume2, VolumeX, Globe } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -31,6 +32,7 @@ export function ReelsResults({ apiResponse }: ReelsResultsProps) {
   const [isMuted, setIsMuted] = React.useState<boolean[]>([])
   const videoRefs = React.useRef<(HTMLVideoElement | null)[]>([])
   const { toast } = useToast()
+  const router = useRouter()
 
   // Initialize state arrays when clips change
   React.useEffect(() => {
@@ -120,6 +122,17 @@ export function ReelsResults({ apiResponse }: ReelsResultsProps) {
       title: "Download started",
       description: `Clip ${clipNumber} is being downloaded`,
     })
+  }
+  
+  // Function to handle translation
+  const handleTranslate = (url: string) => {
+    // Navigate to the translate page with the video URL as a query parameter
+    router.push(`/translate?videoUrl=${encodeURIComponent(url)}`);
+    
+    toast({
+      title: "Opening translator",
+      description: "Redirecting to the translation page",
+    });
   }
   
   // Handle seek in progress bar
@@ -268,21 +281,8 @@ export function ReelsResults({ apiResponse }: ReelsResultsProps) {
                 )}
               </div>
             </CardHeader>
-            <CardContent className="p-4">
+            <CardContent className="p-4 flex justify-between items-center">
               <CardTitle className="line-clamp-2 text-base">Clip {clip.clip_number}</CardTitle>
-            </CardContent>
-            <CardFooter className="flex justify-between p-4 pt-0">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={(e) => {
-                  e.preventDefault()
-                  handleDownload(clip.url, clip.clip_number)
-                }}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Download
-              </Button>
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -296,6 +296,33 @@ export function ReelsResults({ apiResponse }: ReelsResultsProps) {
               >
                 <Share2 className="h-4 w-4" />
               </Button>
+            </CardContent>
+            <CardFooter className="flex justify-between p-2 pt-0">
+              <div className="flex space-x-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleDownload(clip.url, clip.clip_number)
+                  }}
+                >
+                  <Download className="mr-1 h-4 w-4" />
+                  Download
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleTranslate(clip.url)
+                  }}
+                >
+                  <Globe className="mr-1 h-4 w-4" />
+                  Translate
+                </Button>
+              </div>
+              
             </CardFooter>
           </Card>
         ))}

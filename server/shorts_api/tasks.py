@@ -1,5 +1,8 @@
 import os
 import threading
+import re
+import requests
+from urllib.parse import urlparse
 from .models import VideoProcessing, LanguageDubbing
 from .utils import upload_to_cloudinary, update_supabase
 from Components.YoutubeDownloader import download_youtube_video
@@ -252,12 +255,36 @@ def start_processing_video(video_processing_id):
     thread.start()
     return thread 
 
+def is_cloudinary_url(url):
+    """
+    Check if a URL is a Cloudinary URL
+    """
+    parsed_url = urlparse(url)
+    return 'cloudinary.com' in parsed_url.netloc or 'res.cloudinary.com' in parsed_url.netloc
+
+def download_from_cloudinary(url, output_path):
+    """
+    Download a video file from Cloudinary
+    """
+    try:
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        
+        with open(output_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        
+        return output_path
+    except Exception as e:
+        print(f"Error downloading from Cloudinary: {e}")
+        return None
+
 def process_dubbing_task(dubbing_id):
     """
     Process a language dubbing task in a background thread
     
     Steps:
-    1. Download the video
+    1. Download the video (from YouTube or Cloudinary)
     2. Extract audio
     3. Transcribe audio
     4. Translate transcript
@@ -275,20 +302,37 @@ def process_dubbing_task(dubbing_id):
         # Ensure directories exist
         ensure_directories()
         
-        # Download the video
-        vid = download_youtube_video(dubbing.video_url)
-        if not vid:
-            dubbing.error_message = "Unable to download the video"
-            dubbing.status = 'FAILED'
-            dubbing.save()
-            return
+        # Create directories for dubbed content if they don't exist
+        if not os.path.exists('media/dubbed'):
+            os.makedirs('media/dubbed')
+        
+        # Check if the URL is from Cloudinary or YouTube
+        if is_cloudinary_url(dubbing.video_url):
+            print(f"Detected Cloudinary URL: {dubbing.video_url}")
+            vid_output_path = f"videos/cloudinary_video_{dubbing_id}.mp4"
+            vid = download_from_cloudinary(dubbing.video_url, vid_output_path)
+            if not vid:
+                dubbing.error_message = "Unable to download the video from Cloudinary"
+                dubbing.status = 'FAILED'
+                dubbing.save()
+                return
+        else:
+            print(f"Detected YouTube or other URL: {dubbing.video_url}")
+            # Download the video from YouTube
+            vid = download_youtube_video(dubbing.video_url)
+            if not vid:
+                dubbing.error_message = "Unable to download the video"
+                dubbing.status = 'FAILED'
+                dubbing.save()
+                return
             
-        vid = vid.replace(".webm", ".mp4")
+            vid = vid.replace(".webm", ".mp4")
+        
         dubbing.original_video_path = vid
         dubbing.save()
         
         # Extract audio
-        audio = extractAudioDubbed(vid, dubbing.id)
+        audio = extractAudioDubbed(vid, dubbing_id)
         if not audio:
             dubbing.error_message = "No audio file found"
             dubbing.status = 'FAILED'

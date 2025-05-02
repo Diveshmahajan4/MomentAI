@@ -33,8 +33,9 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { ArrowLeft, ExternalLink, Video, Edit as EditIcon } from "lucide-react"
+import { ArrowLeft, ExternalLink, Video, Edit as EditIcon, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 
 interface ProcessingData {
   id: string
@@ -61,7 +62,7 @@ export default function HistoryPage() {
   const { toast } = useToast()
   const supabase = createClient()
   const [selectedVideo, setSelectedVideo] = useState<ProcessingData | null>(null)
-
+  const router = useRouter()
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -92,6 +93,16 @@ export default function HistoryPage() {
 
     fetchUser();
   }, []);
+
+  const handleTranslate = (url: string) => {
+    // Navigate to the translate page with the video URL as a query parameter
+    router.push(`/translate?videoUrl=${encodeURIComponent(url)}`);
+    
+    toast({
+      title: "Opening translator",
+      description: "Redirecting to the translation page",
+    });
+  }
   
   // Function to fetch user's videos
   const fetchUserVideos = async (userEmail: string) => {
@@ -329,7 +340,7 @@ export default function HistoryPage() {
                               <h3 className="font-medium mb-2">Generated Clips ({selectedVideo.cloudinary_urls.length})</h3>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {selectedVideo.cloudinary_urls.map((clip, index) => (
-                                  <div key={clip.public_id} className="border rounded-md p-2">
+                                  <div key={clip.public_id} className="flex-col justify-center items-center border rounded-md p-2">
                                     <video 
                                       src={clip.url} 
                                       className="w-full h-36 object-cover rounded-md mb-2" 
@@ -344,14 +355,21 @@ export default function HistoryPage() {
                                           rel="noopener noreferrer" 
                                           className="text-blue-500 text-sm"
                                         >
+                                        <Button variant="outline">
                                           View
+                                        </Button>
                                         </a>
                                         <Link
                                           href={`/dashboard/edit?id=${selectedVideo.id}&clip=${index}`}
                                           className="text-blue-500 text-sm ml-2"
                                         >
+                                          <Button variant="outline">
                                           Edit
+                                        </Button>
                                         </Link>
+                                        <Button variant="outline" className="text-blue-500 text-sm" onClick={() => handleTranslate(clip.url)}>
+                                          Translate
+                                        </Button>
                                       </div>
                                     </div>
                                   </div>
@@ -451,6 +469,7 @@ export default function HistoryPage() {
                                       View Details
                                     </Button>
                                     {video.status === 'COMPLETED' && (
+                                      <>
                                       <Button
                                         variant="outline"
                                         size="sm"
@@ -461,6 +480,11 @@ export default function HistoryPage() {
                                           Edit
                                         </Link>
                                       </Button>
+                                      <Button variant="outline" size="sm" onClick={() => handleTranslate(video.youtube_url)}>
+                                        <Globe className="h-4 w-4 mr-2"/>
+                                        Translate
+                                      </Button>
+                                      </>
                                     )}
                                   </div>
                                 </TableCell>
