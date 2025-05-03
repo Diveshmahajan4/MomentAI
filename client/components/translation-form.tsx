@@ -111,7 +111,7 @@ export function TranslationForm({ onSubmit, isLoading }: TranslationFormProps) {
                 <FormControl>
                   <Input placeholder="https://youtube.com/watch?v=..." {...field} />
                 </FormControl>
-                <FormDescription>Enter the URL of a video to translate (YouTube, Vimeo, etc.)</FormDescription>
+                <FormDescription>Enter the URL of a video to translate (YouTube)</FormDescription>
                 <FormMessage />
               </FormItem>
             )}

@@ -326,7 +326,7 @@ export default function TranslatePage() {
                 </BreadcrumbList>
               </Breadcrumb>
               <Button size="sm" variant="outline" asChild>
-                <Link href="/dashboard/history">
+                <Link href="/translate/history">
                   <History className="mr-2 h-4 w-4" />
                   View History
                 </Link>
