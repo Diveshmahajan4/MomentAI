@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Globe, Download, RefreshCw, Share2 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
+import { InstagramUploadModal } from "@/components/instagram-upload-modal"
 
 interface TranslationResultsProps {
   dubbing: {
@@ -111,6 +112,12 @@ export function TranslationResults({ dubbing, isLoading, onRetry }: TranslationR
                   <Download className="h-4 w-4 mr-2" />
                   Download
                 </Button>
+                <InstagramUploadModal 
+                  videoPath={dubbing.cloudinary_urls[0].url} 
+                  onSuccess={() => {
+                    // Optional: Add any success handling here
+                  }}
+                />
               </div>
             )}
           </div>

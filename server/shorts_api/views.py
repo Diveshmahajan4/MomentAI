@@ -5,6 +5,8 @@ from rest_framework.response import Response
 from .models import VideoProcessing, LanguageDubbing
 from .serializers import VideoProcessingSerializer, VideoRequestSerializer, LanguageDubbingSerializer, DubbingRequestSerializer
 from .tasks import start_processing_video, start_dubbing_process
+from Components.Instagram import InstagramUploader
+from rest_framework.decorators import api_view
 
 # Create your views here.
 
@@ -139,3 +141,42 @@ class UserDubbingsView(APIView):
         dubbings = LanguageDubbing.objects.filter(username=username)
         serializer = LanguageDubbingSerializer(dubbings, many=True)
         return Response(serializer.data)
+
+@api_view(['POST'])
+def upload_to_instagram(request):
+    try:
+        video_url = request.data.get('video_path')  # This is now a Cloudinary URL
+        caption = request.data.get('caption', '')
+        username = request.data.get('username')
+        password = request.data.get('password')
+        
+        if not all([video_url, username, password]):
+            return Response({
+                'error': 'Missing required fields'
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        uploader = InstagramUploader()
+        
+        # Login to Instagram
+        if not uploader.login(username, password):
+            return Response({
+                'error': 'Instagram login failed'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+            
+        # Upload the reel (now handles Cloudinary URL internally)
+        result = uploader.upload_reel(video_url, caption)
+        
+        if result:
+            return Response({
+                'message': 'Reel uploaded successfully',
+                'data': "Video uploaded to Instagram successfully!"
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'error': 'Failed to upload reel'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

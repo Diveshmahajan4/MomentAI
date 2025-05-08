@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
 import { Slider } from "@/components/ui/slider"
+import { InstagramUploadModal } from "@/components/instagram-upload-modal"
 
 interface Clip {
   clip_number: number
@@ -298,7 +299,7 @@ export function ReelsResults({ apiResponse }: ReelsResultsProps) {
               </Button>
             </CardContent>
             <CardFooter className="flex justify-between p-2 pt-0">
-              <div className="flex space-x-1">
+              <div className="flex flex-col space-x-1 space-y-1 w-full">
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -321,8 +322,16 @@ export function ReelsResults({ apiResponse }: ReelsResultsProps) {
                   <Globe className="mr-1 h-4 w-4" />
                   Translate
                 </Button>
+                <InstagramUploadModal 
+                  videoPath={clip.url}
+                  onSuccess={() => {
+                    toast({
+                      title: "Success",
+                      description: "Video uploaded to Instagram successfully!",
+                    })
+                  }}
+                />
               </div>
-              
             </CardFooter>
           </Card>
         ))}
