@@ -18,7 +18,11 @@ def translate_text(text: str, source_language: str = "English", target_language:
     try:
         client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         
-        system_prompt = f"You are a professional translator. Translate the following text from {source_language} to {target_language}. Maintain the original meaning, tone, and style as closely as possible."
+        system_prompt = f"""You are a professional human translator with expertise in translating spoken dialogue from video transcripts. Your job is to accurately and naturally translate the following text from {source_language} to {target_language}, preserving the original meaning, tone, intent, and conversational style. 
+- Translate idioms, cultural references, and colloquial expressions appropriately for the target audience.
+- Maintain the natural flow of spoken language rather than using overly formal or literal phrasing.
+- Do not omit or add information unless required for natural clarity in the target language.
+- Retain names, numbers, and formatting where applicable."""
         
         response = client.chat.completions.create(
             model="gpt-4o",
