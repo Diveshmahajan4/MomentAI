@@ -31,6 +31,7 @@ const youtubeUrlSchema = z.object({
       { message: "Please enter a valid YouTube URL" },
     ),
   addCaptions: z.boolean().default(true),
+  numShorts: z.coerce.number().min(1, { message: "At least 1 short is required" }).max(10, { message: "Maximum 10 shorts allowed" }).default(1),
 })
 
 const fileUploadSchema = z.object({
@@ -48,10 +49,11 @@ const fileUploadSchema = z.object({
       { message: "File must be in MP4, AVI, or MOV format" },
     ),
   addCaptions: z.boolean().default(true),
+  numShorts: z.coerce.number().min(1, { message: "At least 1 short is required" }).max(10, { message: "Maximum 10 shorts allowed" }).default(1),
 })
 
 interface PodcastFormProps {
-  onSubmit: (url: string, isYoutubeUrl: boolean, addCaptions: boolean) => Promise<void>;
+  onSubmit: (url: string, isYoutubeUrl: boolean, addCaptions: boolean, numShorts: number) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -64,6 +66,7 @@ export function PodcastForm({ onSubmit, isLoading }: PodcastFormProps) {
     defaultValues: {
       youtubeUrl: "",
       addCaptions: true,
+      numShorts: 1,
     },
   })
 
@@ -71,16 +74,17 @@ export function PodcastForm({ onSubmit, isLoading }: PodcastFormProps) {
     resolver: zodResolver(fileUploadSchema),
     defaultValues: {
       addCaptions: true,
+      numShorts: 1,
     },
   })
 
   async function onYoutubeSubmit(values: z.infer<typeof youtubeUrlSchema>) {
-    await onSubmit(values.youtubeUrl, true, values.addCaptions);
+    await onSubmit(values.youtubeUrl, true, values.addCaptions, values.numShorts);
   }
 
   async function onFileSubmit(values: z.infer<typeof fileUploadSchema>) {
     const fileURL = URL.createObjectURL(values.file[0]);
-    await onSubmit(fileURL, false, values.addCaptions);
+    await onSubmit(fileURL, false, values.addCaptions, values.numShorts);
   }
 
   return (
@@ -118,6 +122,21 @@ export function PodcastForm({ onSubmit, isLoading }: PodcastFormProps) {
                       </div>
                     </FormControl>
                     <FormDescription>Enter the URL of a YouTube podcast video</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={youtubeForm.control}
+                name="numShorts"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Number of Shorts</FormLabel>
+                    <FormControl>
+                      <Input type="number" min={1} max={10} {...field} />
+                    </FormControl>
+                    <FormDescription>How many shorts to generate (1-10)</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -179,6 +198,21 @@ export function PodcastForm({ onSubmit, isLoading }: PodcastFormProps) {
                       </div>
                     </FormControl>
                     <FormDescription>Upload a video file (MP4, AVI, MOV, max 20MB)</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={fileForm.control}
+                name="numShorts"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Number of Shorts</FormLabel>
+                    <FormControl>
+                      <Input type="number" min={1} max={10} {...field} />
+                    </FormControl>
+                    <FormDescription>How many shorts to generate (1-10)</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -17,7 +17,7 @@ import { ReelsResults } from "@//components/reels-results"
 import { useToast } from "@/components/ui/use-toast"
 import { createClient } from "@/utils/supabase/client"
 import Link from "next/link"
-import { History, Edit } from "lucide-react"
+import { History } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSearchParams } from "next/navigation"
 
@@ -232,7 +232,7 @@ export default function Page() {
     return () => clearInterval(interval);
   }, [processingId, processingStatus, toast]);
 
-  const handlePodcastSubmit = async (url: string, isYoutubeUrl: boolean, addCaptions: boolean) => {
+  const handlePodcastSubmit = async (url: string, isYoutubeUrl: boolean, addCaptions: boolean, numShorts: number) => {
     setIsLoading(true)
     
     try {
@@ -244,7 +244,7 @@ export default function Page() {
         body: JSON.stringify({
           url: url,
           username: username,
-          num_shorts: 1,
+          num_shorts: numShorts,
           add_captions: addCaptions,
         }),
       })

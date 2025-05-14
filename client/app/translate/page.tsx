@@ -17,7 +17,7 @@ import { TranslationResults } from "@//components/translation-results"
 import { useToast } from "@/components/ui/use-toast"
 import { createClient } from "@/utils/supabase/client"
 import Link from "next/link"
-import { History, Globe } from "lucide-react"
+import { History, Globe, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSearchParams } from "next/navigation"
 
@@ -48,6 +48,7 @@ interface ApiResponse {
 
 export default function TranslatePage() {
   const [isLoading, setIsLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [apiResponse, setApiResponse] = useState<ApiResponse | null>(null)
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [processingStatus, setProcessingStatus] = useState<string | null>(null)
@@ -242,7 +243,8 @@ export default function TranslatePage() {
     addCaptions: boolean
   ) => {
     try {
-      setIsLoading(true);
+      setIsSubmitting(true)
+      setIsLoading(true)
       
       const response = await fetch('http://localhost:8000/api/dubbing/', {
         method: 'POST',
@@ -260,13 +262,13 @@ export default function TranslatePage() {
       });
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
       console.log('Translation response:', data);
       
-      // Update state with the API response
       setApiResponse(data);
       setProcessingId(data.processing.id);
       setProcessingStatus(data.processing.status);
@@ -276,18 +278,17 @@ export default function TranslatePage() {
         description: `Your video is being translated from ${sourceLanguage} to ${targetLanguage}`,
       });
       
-      // Also update our user dubbings list
       await fetchUserDubbings(username);
       
     } catch (error) {
       console.error('Error submitting translation:', error);
       toast({
         title: "Error",
-        description: "Failed to submit translation request",
+        description: error instanceof Error ? error.message : "Failed to submit translation request",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false)
     }
   };
 
@@ -337,13 +338,13 @@ export default function TranslatePage() {
               <div>
                 <TranslationForm 
                   onSubmit={handleTranslationSubmit} 
-                  isLoading={isLoading} 
+                  isLoading={isSubmitting}
                 />
               </div>
               <div>
                 <TranslationResults 
                   dubbing={apiResponse?.processing || null} 
-                  isLoading={isLoadingHistory} 
+                  isLoading={isLoadingHistory && !apiResponse}
                 />
               </div>
             </div>
