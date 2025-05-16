@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, Suspense } from "react"
 import { AppSidebar } from "@//components/app-sidebar"
 import {
   Breadcrumb,
@@ -17,7 +17,7 @@ import { ReelsResults } from "@//components/reels-results"
 import { useToast } from "@/components/ui/use-toast"
 import { createClient } from "@/utils/supabase/client"
 import Link from "next/link"
-import { History } from "lucide-react"
+import { History, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSearchParams } from "next/navigation"
 
@@ -44,7 +44,8 @@ interface ApiResponse {
   processing: ProcessingData
 }
 
-export default function Page() {
+// Client component that handles URL parameters
+function DashboardContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [apiResponse, setApiResponse] = useState<ApiResponse | null>(null)
   const [processingId, setProcessingId] = useState<string | null>(null)
@@ -347,5 +348,18 @@ export default function Page() {
         </div>
       </SidebarInset>
     </SidebarProvider>
+  )
+}
+
+// Main page component with Suspense boundary
+export default function Page() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   )
 }

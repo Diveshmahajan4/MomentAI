@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, Suspense } from "react"
 import { AppSidebar } from "@//components/app-sidebar"
 import {
   Breadcrumb,
@@ -46,7 +46,8 @@ interface ApiResponse {
   processing: DubbingData
 }
 
-export default function TranslatePage() {
+// Client component that handles URL parameters
+function TranslatePageContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [apiResponse, setApiResponse] = useState<ApiResponse | null>(null)
@@ -316,8 +317,8 @@ export default function TranslatePage() {
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem>
-                    <BreadcrumbLink as={Link} href="/dashboard">
-                      Dashboard
+                    <BreadcrumbLink>
+                      <Link href="/dashboard">Dashboard</Link>
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
@@ -399,5 +400,18 @@ export default function TranslatePage() {
         </SidebarInset>
       </div>
     </SidebarProvider>
+  )
+}
+
+// Main page component with Suspense boundary
+export default function TranslatePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <TranslatePageContent />
+    </Suspense>
   )
 } 

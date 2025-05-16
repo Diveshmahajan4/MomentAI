@@ -50,6 +50,12 @@ interface ProcessingData {
   error_message?: string | null
 }
 
+interface User {
+  name: string
+  email: string
+  avatar: string
+}
+
 export default function HistoryPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [parsedUser, setParsedUser] = useState<User>({

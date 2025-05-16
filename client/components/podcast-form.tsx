@@ -36,21 +36,33 @@ const youtubeUrlSchema = z.object({
 
 const fileUploadSchema = z.object({
   file: z
-    .instanceof(FileList)
-    .refine((files) => files.length > 0, { message: "Please select a file" })
+    .custom<FileList>(
+      (val): val is FileList =>
+        typeof FileList !== "undefined" && val instanceof FileList,
+      { message: "Invalid file input" }
+    )
+    .refine((files) => files.length > 0, {
+      message: "Please select a file",
+    })
     .refine((files) => files[0].size <= 20 * 1024 * 1024, {
       message: "File size must be less than 20MB",
     })
-    .refine(
-      (files) => {
-        const file = files[0]
-        return ["video/mp4", "video/avi", "video/quicktime"].includes(file.type)
-      },
-      { message: "File must be in MP4, AVI, or MOV format" },
-    ),
+    .refine((files) => {
+      const file = files[0];
+      return ["video/mp4", "video/avi", "video/quicktime"].includes(file.type);
+    }, {
+      message: "File must be in MP4, AVI, or MOV format",
+    }),
+
   addCaptions: z.boolean().default(true),
-  numShorts: z.coerce.number().min(1, { message: "At least 1 short is required" }).max(10, { message: "Maximum 10 shorts allowed" }).default(1),
-})
+
+  numShorts: z.coerce
+    .number()
+    .min(1, { message: "At least 1 short is required" })
+    .max(10, { message: "Maximum 10 shorts allowed" })
+    .default(1),
+});
+
 
 interface PodcastFormProps {
   onSubmit: (url: string, isYoutubeUrl: boolean, addCaptions: boolean, numShorts: number) => Promise<void>;

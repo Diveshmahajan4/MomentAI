@@ -1,10 +1,14 @@
 "use client"; 
 
-import { useEffect } from "react";
+import { ReactNode, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 
-export default function ProtectedRoute({ children }) {
+interface ProtectedRouteProps {
+  children: ReactNode;
+}
+
+export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createClient();
