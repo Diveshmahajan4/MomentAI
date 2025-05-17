@@ -30,12 +30,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-+v57&-dw7+c1a#lm0j!580+dwwvv0gf$a)26_nq)vxhbze34_-'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-+v57&-dw7+c1a#lm0j!580+dwwvv0gf$a)26_nq)vxhbze34_-')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',') if os.getenv('ALLOWED_HOSTS') else []
+if DEBUG:
+    ALLOWED_HOSTS.extend(['localhost', '127.0.0.1'])
+
 
 
 # Application definition
@@ -130,6 +133,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Media files
 MEDIA_URL = '/media/'
@@ -150,7 +154,9 @@ CLOUDINARY = {
 # Supabase configuration
 SUPABASE_URL = os.getenv('SUPABASE_URL', '')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
-SUPABASE_TABLE = os.getenv('SUPABASE_TABLE', 'shorts')
+SUPABASE_TABLE_VIDEO_PROCESSING = os.getenv('SUPABASE_TABLE_VIDEO_PROCESSING', 'video_processing')
+SUPABASE_TABLE_LANGUAGE_DUBBING = os.getenv('SUPABASE_TABLE_LANGUAGE_DUBBING', 'language_dubbing')
+
 
 # Logging Configuration
 LOGGING = {

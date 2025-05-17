@@ -43,7 +43,7 @@ interface ProcessingData {
   youtube_url: string
   status: string
   cloudinary_url: string | null
-  cloudinary_urls: Array<{ url: string, public_id: string }>
+  cloudinary_urls_json: Array<{ url: string, public_id: string }>
   num_shorts: number
   created_at: string
   updated_at: string

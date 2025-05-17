@@ -2,11 +2,16 @@ from django.shortcuts import render
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import VideoProcessing, LanguageDubbing
 from .serializers import VideoProcessingSerializer, VideoRequestSerializer, LanguageDubbingSerializer, DubbingRequestSerializer
 from .tasks import start_processing_video, start_dubbing_process
 from Components.Instagram import InstagramUploader
 from rest_framework.decorators import api_view
+import uuid
+import datetime
+from .supabase_client import (
+    create_video_processing, get_video_processing, get_video_processing_by_username,
+    create_language_dubbing, get_language_dubbing, get_language_dubbing_by_username
+)
 
 # Create your views here.
 
@@ -24,24 +29,31 @@ class ShortsGeneratorView(APIView):
             num_shorts = serializer.validated_data.get('num_shorts', 1)
             add_captions = serializer.validated_data.get('add_captions', True)
             
-            # Create a new video processing record
-            video_processing = VideoProcessing.objects.create(
-                youtube_url=url,
-                username=username,
-                num_shorts=num_shorts,
-                status='PENDING',
-                add_captions=add_captions
-            )
+            # Create a new video processing record in Supabase
+            video_processing = create_video_processing({
+                'youtube_url': url,
+                'username': username,
+                'num_shorts': num_shorts,
+                'status': 'PENDING',
+                'add_captions': add_captions,
+                'created_at': datetime.datetime.now().isoformat(),
+                'updated_at': datetime.datetime.now().isoformat()
+            })
+            
+            if not video_processing:
+                return Response(
+                    {'error': 'Failed to create video processing record'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
             
             # Start processing in the background
-            start_processing_video(video_processing.id)
+            start_processing_video(video_processing['id'])
             
             # Return the processing record with a 202 Accepted status
-            response_serializer = VideoProcessingSerializer(video_processing)
             return Response(
                 {
                     'message': f'Video processing started for {num_shorts} shorts',
-                    'processing': response_serializer.data
+                    'processing': video_processing
                 }, 
                 status=status.HTTP_202_ACCEPTED
             )
@@ -54,11 +66,11 @@ class VideoProcessingStatusView(APIView):
     """
     
     def get(self, request, processing_id, format=None):
-        try:
-            video_processing = VideoProcessing.objects.get(id=processing_id)
-            serializer = VideoProcessingSerializer(video_processing)
-            return Response(serializer.data)
-        except VideoProcessing.DoesNotExist:
+        video_processing = get_video_processing(processing_id)
+        
+        if video_processing:
+            return Response(video_processing)
+        else:
             return Response(
                 {'error': 'Processing task not found'}, 
                 status=status.HTTP_404_NOT_FOUND
@@ -70,9 +82,9 @@ class UserVideosView(APIView):
     """
     
     def get(self, request, username, format=None):
-        videos = VideoProcessing.objects.filter(username=username)
-        serializer = VideoProcessingSerializer(videos, many=True)
-        return Response(serializer.data)
+        videos = get_video_processing_by_username(username)
+        print("Videos:", videos)
+        return Response(videos)
 
 class LanguageDubbingView(APIView):
     """
@@ -90,26 +102,35 @@ class LanguageDubbingView(APIView):
             voice = serializer.validated_data.get('voice', 'alloy')
             add_captions = serializer.validated_data.get('add_captions', True)
             
-            # Create a new language dubbing record
-            dubbing = LanguageDubbing.objects.create(
-                video_url=url,
-                username=username,
-                source_language=source_language,
-                target_language=target_language,
-                voice=voice,
-                status='PENDING',
-                add_captions=add_captions
-            )
+            # Create a new language dubbing record in Supabase
+            new_id = str(uuid.uuid4())
+            dubbing = create_language_dubbing({
+                'id': new_id,
+                'video_url': url,
+                'username': username,
+                'source_language': source_language,
+                'target_language': target_language,
+                'voice': voice,
+                'status': 'PENDING',
+                'add_captions': add_captions,
+                'created_at': datetime.datetime.now().isoformat(),
+                'updated_at': datetime.datetime.now().isoformat()
+            })
+            
+            if not dubbing:
+                return Response(
+                    {'error': 'Failed to create language dubbing record'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
             
             # Start processing in the background
-            start_dubbing_process(dubbing.id)
+            start_dubbing_process(dubbing['id'])
             
             # Return the processing record with a 202 Accepted status
-            response_serializer = LanguageDubbingSerializer(dubbing)
             return Response(
                 {
                     'message': f'Language dubbing started from {source_language} to {target_language}',
-                    'processing': response_serializer.data
+                    'processing': dubbing
                 }, 
                 status=status.HTTP_202_ACCEPTED
             )
@@ -122,11 +143,11 @@ class DubbingStatusView(APIView):
     """
     
     def get(self, request, dubbing_id, format=None):
-        try:
-            dubbing = LanguageDubbing.objects.get(id=dubbing_id)
-            serializer = LanguageDubbingSerializer(dubbing)
-            return Response(serializer.data)
-        except LanguageDubbing.DoesNotExist:
+        dubbing = get_language_dubbing(dubbing_id)
+        
+        if dubbing:
+            return Response(dubbing)
+        else:
             return Response(
                 {'error': 'Dubbing task not found'}, 
                 status=status.HTTP_404_NOT_FOUND
@@ -138,9 +159,8 @@ class UserDubbingsView(APIView):
     """
     
     def get(self, request, username, format=None):
-        dubbings = LanguageDubbing.objects.filter(username=username)
-        serializer = LanguageDubbingSerializer(dubbings, many=True)
-        return Response(serializer.data)
+        dubbings = get_language_dubbing_by_username(username)
+        return Response(dubbings)
 
 @api_view(['POST'])
 def upload_to_instagram(request):

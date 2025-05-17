@@ -2,8 +2,13 @@ import os
 import threading
 import re
 import requests
+import json
+import uuid
 from urllib.parse import urlparse
-from .models import VideoProcessing, LanguageDubbing
+from .supabase_client import (
+    get_video_processing, update_video_processing, get_language_dubbing, update_language_dubbing,
+    add_cloudinary_url_to_video_processing, add_cloudinary_url_to_language_dubbing
+)
 from .utils import upload_to_cloudinary, update_supabase
 from Components.YoutubeDownloader import download_youtube_video
 from Components.Edit import extractAudio, crop_video, extractAudioDubbed
@@ -25,11 +30,18 @@ def process_video_task(video_processing_id):
     """
     Process a video in a background thread
     """
-    video_processing = VideoProcessing.objects.get(id=video_processing_id)
+    # Get the video processing record from Supabase
+    video_processing = get_video_processing(video_processing_id)
+    
+    if not video_processing:
+        print(f"Error: Video processing with ID {video_processing_id} not found")
+        return
     
     try:
-        video_processing.status = 'PROCESSING'
-        video_processing.save()
+        # Update status to PROCESSING
+        update_video_processing(video_processing_id, {
+            'status': 'PROCESSING'
+        })
         
         # Ensure directories exist
         ensure_directories()
@@ -39,7 +51,7 @@ def process_video_task(video_processing_id):
         
         if test_mode:
             # In test mode, we'll generate multiple fake shorts
-            for i in range(video_processing.num_shorts):
+            for i in range(video_processing.get('num_shorts', 1)):
                 final_path = f"media/final_{video_processing_id}_{i}.mp4"
                 
                 # Try to use an existing video file
@@ -56,28 +68,31 @@ def process_video_task(video_processing_id):
                         shutil.copy(existing_videos[0], final_path)
                         print(f"Copied {existing_videos[0]} to {final_path} for testing")
                     else:
-                        video_processing.error_message = f"Test file not found and no existing videos to copy."
-                        video_processing.status = 'FAILED'
-                        video_processing.save()
+                        update_video_processing(video_processing_id, {
+                            'error_message': "Test file not found and no existing videos to copy.",
+                            'status': 'FAILED'
+                        })
                         return
                 
                 # Upload to Cloudinary
-                upload_result = upload_to_cloudinary(final_path, f"user_{video_processing.username}_{i}")
+                upload_result = upload_to_cloudinary(final_path, f"user_{video_processing.get('username', 'anonymous')}_{i}")
                 if upload_result:
                     # Add this URL to the list
-                    video_processing.add_cloudinary_url(upload_result['url'], upload_result['public_id'])
-                    print(f"Uploaded short {i+1}/{video_processing.num_shorts} to Cloudinary: {upload_result['url']}")
+                    add_cloudinary_url_to_video_processing(video_processing_id, upload_result['url'], upload_result['public_id'])
+                    print(f"Uploaded short {i+1}/{video_processing.get('num_shorts', 1)} to Cloudinary: {upload_result['url']}")
                 else:
-                    video_processing.error_message = f"Failed to upload short {i+1} to Cloudinary"
-                    video_processing.status = 'FAILED'
-                    video_processing.save()
+                    update_video_processing(video_processing_id, {
+                        'error_message': f"Failed to upload short {i+1} to Cloudinary",
+                        'status': 'FAILED'
+                    })
             
             # If we get here, all uploads were successful
-            video_processing.status = 'COMPLETED'
-            video_processing.add_captions = "True"
-            video_processing.save()
+            update_video_processing(video_processing_id, {
+                'status': 'COMPLETED',
+                'add_captions': True
+            })
              # Add captions to the video if enabled
-            if video_processing.add_captions:
+            if video_processing.get('add_captions', True):
                 try:
                     captioned_path = f"media/captioned/final_{video_processing_id}_{i}_captioned.mp4"
                     
@@ -112,42 +127,48 @@ def process_video_task(video_processing_id):
                 print(f"Captions disabled for this processing task, skipping caption generation")
             
             # Update Supabase with all URLs
-            if video_processing.cloudinary_urls:
-                urls = [item['url'] for item in video_processing.cloudinary_urls]
+            video_processing = get_video_processing(video_processing_id)
+            if video_processing.get('cloudinary_urls_json'):
+                cloudinary_urls = json.loads(video_processing.get('cloudinary_urls_json'))
+                urls = [item['url'] for item in cloudinary_urls]
                 update_supabase(
-                    video_processing.username,
-                    video_processing.youtube_url,
+                    video_processing.get('username', 'anonymous'),
+                    video_processing.get('youtube_url'),
                     urls
                 )
             return
         
         else:
             # Download the video
-            vid = download_youtube_video(video_processing.youtube_url)
+            vid = download_youtube_video(video_processing.get('youtube_url'))
             if not vid:
-                video_processing.error_message = "Unable to download the video"
-                video_processing.status = 'FAILED'
-                video_processing.save()
+                update_video_processing(video_processing_id, {
+                    'error_message': "Unable to download the video",
+                    'status': 'FAILED'
+                })
                 return
                 
             vid = vid.replace(".webm", ".mp4")
-            video_processing.original_video_path = vid
-            video_processing.save()
+            update_video_processing(video_processing_id, {
+                'original_video_path': vid
+            })
             
             # Extract audio
             audio = extractAudio(vid)
             if not audio:
-                video_processing.error_message = "No audio file found"
-                video_processing.status = 'FAILED'
-                video_processing.save()
+                update_video_processing(video_processing_id, {
+                    'error_message': "No audio file found",
+                    'status': 'FAILED'
+                })
                 return
                 
             # Transcribe audio
             transcriptions = transcribeAudio(audio)
             if len(transcriptions) == 0:
-                video_processing.error_message = "No transcriptions found"
-                video_processing.status = 'FAILED'
-                video_processing.save()
+                update_video_processing(video_processing_id, {
+                    'error_message': "No transcriptions found",
+                    'status': 'FAILED'
+                })
                 return
                 
             trans_text = ""
@@ -155,8 +176,8 @@ def process_video_task(video_processing_id):
                 trans_text += (f"{start} - {end}: {text}")
             
             # Generate multiple highlights
-            for i in range(video_processing.num_shorts):
-                print(f"Generating short {i+1}/{video_processing.num_shorts}")
+            for i in range(video_processing.get('num_shorts', 1)):
+                print(f"Generating short {i+1}/{video_processing.get('num_shorts', 1)}")
                 
                 # Get highlight timestamps - we add a different prompt for each short to get variety
                 start, stop = GetHighlight(trans_text + f" (Generate highlight {i+1}, different from previous ones)")
@@ -180,7 +201,7 @@ def process_video_task(video_processing_id):
                 combine_videos(output, cropped, final_path)
                 
                 # Add captions to the video if enabled
-                if video_processing.add_captions:
+                if video_processing.get('add_captions', True):
                     try:
                         captioned_path = f"media/captioned/final_{video_processing_id}_{i}_captioned.mp4"
                         
@@ -189,7 +210,7 @@ def process_video_task(video_processing_id):
                             final_path,
                             captioned_path,
                             font="PoetsenOne-Regular.ttf",
-                            font_size=100,
+                            font_size=40,
                             font_color="white",
                             stroke_width=2,
                             stroke_color="black",
@@ -215,36 +236,41 @@ def process_video_task(video_processing_id):
                     print(f"Captions disabled for this processing task, skipping caption generation")
                 
                 # Upload to Cloudinary
-                upload_result = upload_to_cloudinary(final_path, f"user_{video_processing.username}_{i}")
+                upload_result = upload_to_cloudinary(final_path, f"user_{video_processing.get('username', 'anonymous')}_{i}")
                 if upload_result:
                     # Add this URL to the list
-                    video_processing.add_cloudinary_url(upload_result['url'], upload_result['public_id'])
-                    print(f"Uploaded short {i+1}/{video_processing.num_shorts} to Cloudinary: {upload_result['url']}")
+                    add_cloudinary_url_to_video_processing(video_processing_id, upload_result['url'], upload_result['public_id'])
+                    print(f"Uploaded short {i+1}/{video_processing.get('num_shorts', 1)} to Cloudinary: {upload_result['url']}")
                 else:
                     print(f"Failed to upload short {i+1} to Cloudinary, continuing with others")
             
-            # If we have at least one successful upload, mark as completed
-            if video_processing.cloudinary_urls:
-                video_processing.status = 'COMPLETED'
-                video_processing.save()
+            # Check if we have any successful uploads
+            video_processing = get_video_processing(video_processing_id)
+            if video_processing.get('cloudinary_urls_json'):
+                update_video_processing(video_processing_id, {
+                    'status': 'COMPLETED'
+                })
                 
-                # # Update Supabase with all URLs
-                # urls = [item['url'] for item in video_processing.cloudinary_urls]
-                # update_supabase(
-                #     video_processing.username,
-                #     video_processing.youtube_url,
-                #     urls
-                # )
+                # Update Supabase with all URLs
+                cloudinary_urls = json.loads(video_processing.get('cloudinary_urls_json'))
+                urls = [item['url'] for item in cloudinary_urls]
+                update_supabase(
+                    video_processing.get('username', 'anonymous'),
+                    video_processing.get('youtube_url'),
+                    urls
+                )
                 return
             else:
-                video_processing.error_message = "Failed to create any shorts"
-                video_processing.status = 'FAILED'
-                video_processing.save()
+                update_video_processing(video_processing_id, {
+                    'error_message': "Failed to create any shorts",
+                    'status': 'FAILED'
+                })
     
     except Exception as e:
-        video_processing.status = 'FAILED'
-        video_processing.error_message = str(e)
-        video_processing.save()
+        update_video_processing(video_processing_id, {
+            'status': 'FAILED',
+            'error_message': str(e)
+        })
 
 def start_processing_video(video_processing_id):
     """
@@ -293,11 +319,18 @@ def process_dubbing_task(dubbing_id):
     7. Add captions (optional)
     8. Upload to Cloudinary
     """
-    dubbing = LanguageDubbing.objects.get(id=dubbing_id)
+    # Get dubbing data from Supabase
+    dubbing = get_language_dubbing(dubbing_id)
+    
+    if not dubbing:
+        print(f"Error: Language dubbing with ID {dubbing_id} not found")
+        return
     
     try:
-        dubbing.status = 'PROCESSING'
-        dubbing.save()
+        # Update status to PROCESSING
+        update_language_dubbing(dubbing_id, {
+            'status': 'PROCESSING'
+        })
         
         # Ensure directories exist
         ensure_directories()
@@ -307,73 +340,80 @@ def process_dubbing_task(dubbing_id):
             os.makedirs('media/dubbed')
         
         # Check if the URL is from Cloudinary or YouTube
-        if is_cloudinary_url(dubbing.video_url):
-            print(f"Detected Cloudinary URL: {dubbing.video_url}")
+        if is_cloudinary_url(dubbing.get('video_url')):
+            print(f"Detected Cloudinary URL: {dubbing.get('video_url')}")
             vid_output_path = f"videos/cloudinary_video_{dubbing_id}.mp4"
-            vid = download_from_cloudinary(dubbing.video_url, vid_output_path)
+            vid = download_from_cloudinary(dubbing.get('video_url'), vid_output_path)
             if not vid:
-                dubbing.error_message = "Unable to download the video from Cloudinary"
-                dubbing.status = 'FAILED'
-                dubbing.save()
+                update_language_dubbing(dubbing_id, {
+                    'error_message': "Unable to download the video from Cloudinary",
+                    'status': 'FAILED'
+                })
                 return
         else:
-            print(f"Detected YouTube or other URL: {dubbing.video_url}")
+            print(f"Detected YouTube or other URL: {dubbing.get('video_url')}")
             # Download the video from YouTube
-            vid = download_youtube_video(dubbing.video_url)
+            vid = download_youtube_video(dubbing.get('video_url'))
             if not vid:
-                dubbing.error_message = "Unable to download the video"
-                dubbing.status = 'FAILED'
-                dubbing.save()
+                update_language_dubbing(dubbing_id, {
+                    'error_message': "Unable to download the video",
+                    'status': 'FAILED'
+                })
                 return
             
             vid = vid.replace(".webm", ".mp4")
         
-        dubbing.original_video_path = vid
-        dubbing.save()
+        update_language_dubbing(dubbing_id, {
+            'original_video_path': vid
+        })
         
         # Extract audio
         audio = extractAudioDubbed(vid, dubbing_id)
         if not audio:
-            dubbing.error_message = "No audio file found"
-            dubbing.status = 'FAILED'
-            dubbing.save()
+            update_language_dubbing(dubbing_id, {
+                'error_message': "No audio file found",
+                'status': 'FAILED'
+            })
             return
             
         # Transcribe audio
         transcriptions = transcribeAudio(audio)
         if len(transcriptions) == 0:
-            dubbing.error_message = "No transcriptions found"
-            dubbing.status = 'FAILED'
-            dubbing.save()
+            update_language_dubbing(dubbing_id, {
+                'error_message': "No transcriptions found",
+                'status': 'FAILED'
+            })
             return
         
         # Translate transcript to target language
-        print(f"Translating transcript from {dubbing.source_language} to {dubbing.target_language}")
+        print(f"Translating transcript from {dubbing.get('source_language')} to {dubbing.get('target_language')}")
         translated_transcript = translate_transcript_with_timestamps(
             transcriptions, 
-            source_language=dubbing.source_language,
-            target_language=dubbing.target_language
+            source_language=dubbing.get('source_language'),
+            target_language=dubbing.get('target_language')
         )
         
         if not translated_transcript:
-            dubbing.error_message = "Failed to translate transcript"
-            dubbing.status = 'FAILED'
-            dubbing.save()
+            update_language_dubbing(dubbing_id, {
+                'error_message': "Failed to translate transcript",
+                'status': 'FAILED'
+            })
             return
         
         # Generate speech from translated transcript
         dubbed_audio_path = f"media/dubbed/audio_{dubbing_id}.wav"
-        print(f"Generating speech from translated transcript using voice: {dubbing.voice}")
+        print(f"Generating speech from translated transcript using voice: {dubbing.get('voice')}")
         audio_result = transcript_to_speech(
             translated_transcript,
             dubbed_audio_path,
-            voice=dubbing.voice
+            voice=dubbing.get('voice')
         )
         
         if not audio_result:
-            dubbing.error_message = "Failed to generate speech from translated transcript"
-            dubbing.status = 'FAILED'
-            dubbing.save()
+            update_language_dubbing(dubbing_id, {
+                'error_message': "Failed to generate speech from translated transcript",
+                'status': 'FAILED'
+            })
             return
         
         # Merge speech with original video
@@ -386,17 +426,19 @@ def process_dubbing_task(dubbing_id):
         )
         
         if not merge_success:
-            dubbing.error_message = "Failed to merge audio with video"
-            dubbing.status = 'FAILED'
-            dubbing.save()
+            update_language_dubbing(dubbing_id, {
+                'error_message': "Failed to merge audio with video",
+                'status': 'FAILED'
+            })
             return
         
-        dubbing.dubbed_video_path = dubbed_video_path
-        dubbing.save()
+        update_language_dubbing(dubbing_id, {
+            'dubbed_video_path': dubbed_video_path
+        })
         
         # Add captions to the video if enabled
         final_path = dubbed_video_path
-        if dubbing.add_captions:
+        if dubbing.get('add_captions', True):
             try:
                 captioned_path = f"media/captioned/dubbed_{dubbing_id}_captioned.mp4"
                 
@@ -414,7 +456,7 @@ def process_dubbing_task(dubbing_id):
                     dubbed_video_path,
                     captioned_path,
                     font="PoetsenOne-Regular.ttf",
-                    font_size=100,
+                    font_size=30,
                     font_color="white",
                     stroke_width=2,
                     stroke_color="black",
@@ -441,25 +483,28 @@ def process_dubbing_task(dubbing_id):
             print("Captions disabled for this dubbing task, skipping caption generation")
         
         # Upload to Cloudinary
-        upload_result = upload_to_cloudinary(final_path, f"dubbed_{dubbing.username}_{dubbing.target_language}")
+        upload_result = upload_to_cloudinary(final_path, f"dubbed_{dubbing.get('username', 'anonymous')}_{dubbing.get('target_language')}")
         if upload_result:
             # Add this URL
-            dubbing.add_cloudinary_url(upload_result['url'], upload_result['public_id'])
+            add_cloudinary_url_to_language_dubbing(dubbing_id, upload_result['url'], upload_result['public_id'])
             print(f"Uploaded dubbed video to Cloudinary: {upload_result['url']}")
             
             # Mark as completed
-            dubbing.status = 'COMPLETED'
-            dubbing.save()
+            update_language_dubbing(dubbing_id, {
+                'status': 'COMPLETED'
+            })
             return
         else:
-            dubbing.error_message = "Failed to upload dubbed video to Cloudinary"
-            dubbing.status = 'FAILED'
-            dubbing.save()
+            update_language_dubbing(dubbing_id, {
+                'error_message': "Failed to upload dubbed video to Cloudinary",
+                'status': 'FAILED'
+            })
     
     except Exception as e:
-        dubbing.status = 'FAILED'
-        dubbing.error_message = str(e)
-        dubbing.save()
+        update_language_dubbing(dubbing_id, {
+            'status': 'FAILED',
+            'error_message': str(e)
+        })
 
 def start_dubbing_process(dubbing_id):
     """

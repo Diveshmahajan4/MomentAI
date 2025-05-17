@@ -27,7 +27,7 @@ interface ProcessingData {
   youtube_url: string
   status: string
   cloudinary_url: string | null
-  cloudinary_urls: Array<{ url: string, public_id: string }>
+  cloudinary_urls_json: string
   num_shorts: number
   created_at: string
   updated_at: string
@@ -185,8 +185,7 @@ function DashboardContent() {
         const data = await response.json();
         
         setProcessingStatus(data.status);
-        
-        // Update the API response with the latest data
+        console.log("Processing data:", data);
         if (data.status === 'COMPLETED') {
           setApiResponse(prev => {
             if (!prev) return null;
@@ -285,7 +284,7 @@ function DashboardContent() {
   const transformedApiResponse = apiResponse && apiResponse.processing.status === 'COMPLETED' ? {
     message: apiResponse.message,
     video_path: apiResponse.processing.youtube_url,
-    clips: apiResponse.processing.cloudinary_urls.map((item, index) => ({
+    clips: JSON.parse(apiResponse.processing.cloudinary_urls_json).map((item: { url: string }, index: number) => ({
       clip_number: index + 1,
       url: item.url
     }))
