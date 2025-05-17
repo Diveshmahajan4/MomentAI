@@ -341,11 +341,11 @@ export default function HistoryPage() {
                             </div>
                           </div>
                           
-                          {selectedVideo.status === 'COMPLETED' && selectedVideo.cloudinary_urls && (
+                          {selectedVideo.status === 'COMPLETED' && selectedVideo.cloudinary_urls_json && (
                             <div>
-                              <h3 className="font-medium mb-2">Generated Clips ({selectedVideo.cloudinary_urls.length})</h3>
+                              <h3 className="font-medium mb-2">Generated Clips ({selectedVideo.cloudinary_urls_json.length})</h3>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {selectedVideo.cloudinary_urls.map((clip, index) => (
+                                {selectedVideo.cloudinary_urls_json.map((clip, index) => (
                                   <div key={clip.public_id} className="flex-col justify-center items-center border rounded-md p-2">
                                     <video 
                                       src={clip.url} 
@@ -462,7 +462,7 @@ export default function HistoryPage() {
                                 <TableCell>{formatDate(video.created_at)}</TableCell>
                                 <TableCell>
                                   {video.status === 'COMPLETED' ? 
-                                    (video.cloudinary_urls?.length || 0) : 
+                                    (video.cloudinary_urls_json?.length || 0) : 
                                     '-'}
                                 </TableCell>
                                 <TableCell className="text-right">
