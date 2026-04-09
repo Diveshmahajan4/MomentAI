@@ -239,7 +239,7 @@ function DashboardContent() {
     return () => clearInterval(interval);
   }, [processingId, processingStatus, toast]);
 
-  const handlePodcastSubmit = async (url: string, isYoutubeUrl: boolean, addCaptions: boolean, numShorts: number) => {
+  const handlePodcastSubmit = async (url: string, isYoutubeUrl: boolean, addCaptions: boolean, numShorts: number, cropToPortrait: boolean) => {
     setIsLoading(true)
     
     try {
@@ -253,6 +253,7 @@ function DashboardContent() {
           username: username,
           num_shorts: numShorts,
           add_captions: addCaptions,
+          crop_to_portrait: cropToPortrait,
         }),
       })
   

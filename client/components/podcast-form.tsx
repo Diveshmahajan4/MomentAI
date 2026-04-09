@@ -20,7 +20,6 @@ const youtubeUrlSchema = z.object({
     .url({ message: "Please enter a valid URL" })
     .refine(
       (url) => {
-        // Basic YouTube URL validation
         return (
           url.includes("youtube.com/watch") ||
           url.includes("youtu.be/") ||
@@ -31,6 +30,7 @@ const youtubeUrlSchema = z.object({
       { message: "Please enter a valid YouTube URL" },
     ),
   addCaptions: z.boolean().default(true),
+  cropToPortrait: z.boolean().default(true),
   numShorts: z.coerce.number().min(1, { message: "At least 1 short is required" }).max(10, { message: "Maximum 10 shorts allowed" }).default(1),
 })
 
@@ -55,6 +55,7 @@ const fileUploadSchema = z.object({
     }),
 
   addCaptions: z.boolean().default(true),
+  cropToPortrait: z.boolean().default(true),
 
   numShorts: z.coerce
     .number()
@@ -65,7 +66,7 @@ const fileUploadSchema = z.object({
 
 
 interface PodcastFormProps {
-  onSubmit: (url: string, isYoutubeUrl: boolean, addCaptions: boolean, numShorts: number) => Promise<void>;
+  onSubmit: (url: string, isYoutubeUrl: boolean, addCaptions: boolean, numShorts: number, cropToPortrait: boolean) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -78,6 +79,7 @@ export function PodcastForm({ onSubmit, isLoading }: PodcastFormProps) {
     defaultValues: {
       youtubeUrl: "",
       addCaptions: true,
+      cropToPortrait: true,
       numShorts: 1,
     },
   })
@@ -86,17 +88,18 @@ export function PodcastForm({ onSubmit, isLoading }: PodcastFormProps) {
     resolver: zodResolver(fileUploadSchema),
     defaultValues: {
       addCaptions: true,
+      cropToPortrait: true,
       numShorts: 1,
     },
   })
 
   async function onYoutubeSubmit(values: z.infer<typeof youtubeUrlSchema>) {
-    await onSubmit(values.youtubeUrl, true, values.addCaptions, values.numShorts);
+    await onSubmit(values.youtubeUrl, true, values.addCaptions, values.numShorts, values.cropToPortrait);
   }
 
   async function onFileSubmit(values: z.infer<typeof fileUploadSchema>) {
     const fileURL = URL.createObjectURL(values.file[0]);
-    await onSubmit(fileURL, false, values.addCaptions, values.numShorts);
+    await onSubmit(fileURL, false, values.addCaptions, values.numShorts, values.cropToPortrait);
   }
 
   return (
@@ -174,6 +177,27 @@ export function PodcastForm({ onSubmit, isLoading }: PodcastFormProps) {
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={youtubeForm.control}
+                name="cropToPortrait"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Crop to Portrait</FormLabel>
+                      <FormDescription>
+                        Crop and zoom into the speaker for a vertical short. Turn off to keep the original landscape framing with black bars.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
             </form>
           </Form>
         </TabsContent>
@@ -239,6 +263,27 @@ export function PodcastForm({ onSubmit, isLoading }: PodcastFormProps) {
                       <FormLabel>Add Captions</FormLabel>
                       <FormDescription>
                         Automatically add captions to your shorts. Captions are generated using speech recognition and highlight words as they are spoken.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={fileForm.control}
+                name="cropToPortrait"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Crop to Portrait</FormLabel>
+                      <FormDescription>
+                        Crop and zoom into the speaker for a vertical short. Turn off to keep the original landscape framing with black bars.
                       </FormDescription>
                     </div>
                     <FormControl>

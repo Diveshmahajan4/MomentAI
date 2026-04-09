@@ -23,6 +23,7 @@ class ShortsGeneratorView(APIView):
             username = serializer.validated_data['username']
             num_shorts = serializer.validated_data.get('num_shorts', 1)
             add_captions = serializer.validated_data.get('add_captions', True)
+            crop_to_portrait = serializer.validated_data.get('crop_to_portrait', True)
             
             # Create a new video processing record
             video_processing = VideoProcessing.objects.create(
@@ -30,7 +31,8 @@ class ShortsGeneratorView(APIView):
                 username=username,
                 num_shorts=num_shorts,
                 status='PENDING',
-                add_captions=add_captions
+                add_captions=add_captions,
+                crop_to_portrait=crop_to_portrait
             )
             
             # Start processing in the background

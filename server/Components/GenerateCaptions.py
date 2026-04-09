@@ -130,8 +130,8 @@ def add_captions(
     video_file,
     output_file = "with_transcript.mp4",
 
-    font = "PoetsenOne-Regular.ttf",
-    font_size = 100,
+    font = "PlayfairDisplay-VariableFont_wght.ttf",
+    font_size = 110,
     font_color = "white",
 
     stroke_width = 2,

@@ -20,6 +20,7 @@ class VideoRequestSerializer(serializers.Serializer):
     username = serializers.CharField(required=True, max_length=100)
     num_shorts = serializers.IntegerField(required=False, default=1, min_value=1, max_value=5)
     add_captions = serializers.BooleanField(required=False, default=True)
+    crop_to_portrait = serializers.BooleanField(required=False, default=True)
 
 class LanguageDubbingSerializer(serializers.ModelSerializer):
     cloudinary_urls = serializers.SerializerMethodField()

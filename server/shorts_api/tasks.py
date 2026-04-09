@@ -7,9 +7,9 @@ from .models import VideoProcessing, LanguageDubbing
 from .utils import upload_to_cloudinary, update_supabase
 from Components.YoutubeDownloader import download_youtube_video
 from Components.Edit import extractAudio, crop_video, extractAudioDubbed
-from Components.Transcription import transcribeAudio
-from Components.LanguageTasks import GetHighlight
-from Components.FaceCrop import crop_to_vertical, combine_videos
+from Components.Transcription import transcribeAudio, transcribeAudioWithWordTimestamps
+from Components.LanguageTasks import GetHighlight, GetMultipleHighlights
+from Components.FaceCrop import crop_to_vertical, combine_videos, letterbox_to_portrait
 from Components.GenerateCaptions import add_captions
 from Components.Translation import translate_transcript_with_timestamps
 from Components.TextToSpeech import transcript_to_speech, merge_audio_with_video
@@ -20,6 +20,51 @@ def ensure_directories():
     for directory in directories:
         if not os.path.exists(directory):
             os.makedirs(directory)
+
+def extract_segments_for_clip(transcription_segments, clip_start, clip_end):
+    """
+    Extract and adjust transcription segments for a cropped video clip.
+    
+    Args:
+        transcription_segments: Full transcription with word timestamps
+        clip_start: Start time of the clip in the original video
+        clip_end: End time of the clip in the original video
+    
+    Returns:
+        Adjusted segments with timestamps relative to the clip start (0-based)
+    """
+    adjusted_segments = []
+    
+    for segment in transcription_segments:
+        # Check if segment overlaps with clip
+        if segment["end"] < clip_start or segment["start"] > clip_end:
+            continue
+        
+        adjusted_words = []
+        for word in segment.get("words", []):
+            word_start = word["start"]
+            word_end = word["end"]
+            
+            # Check if word is within clip bounds
+            if word_end < clip_start or word_start > clip_end:
+                continue
+            
+            # Adjust timestamps to be relative to clip start
+            adjusted_words.append({
+                "word": word["word"],
+                "start": max(0, word_start - clip_start),
+                "end": min(clip_end - clip_start, word_end - clip_start)
+            })
+        
+        if adjusted_words:
+            adjusted_segments.append({
+                "start": max(0, segment["start"] - clip_start),
+                "end": min(clip_end - clip_start, segment["end"] - clip_start),
+                "text": segment.get("text", ""),
+                "words": adjusted_words
+            })
+    
+    return adjusted_segments
 
 def process_video_task(video_processing_id):
     """
@@ -85,8 +130,8 @@ def process_video_task(video_processing_id):
                     add_captions(
                         final_path,
                         captioned_path,
-                        font="PoetsenOne-Regular.ttf",
-                        font_size=30,
+                        font="PlayfairDisplay-VariableFont_wght.ttf",
+                        font_size=100,
                         font_color="white",
                         stroke_width=2,
                         stroke_color="black",
@@ -142,7 +187,7 @@ def process_video_task(video_processing_id):
                 video_processing.save()
                 return
                 
-            # Transcribe audio
+            # Transcribe audio (basic transcription for highlight detection)
             transcriptions = transcribeAudio(audio)
             if len(transcriptions) == 0:
                 video_processing.error_message = "No transcriptions found"
@@ -154,42 +199,61 @@ def process_video_task(video_processing_id):
             for text, start, end in transcriptions:
                 trans_text += (f"{start} - {end}: {text}")
             
-            # Generate multiple highlights
-            for i in range(video_processing.num_shorts):
-                print(f"Generating short {i+1}/{video_processing.num_shorts}")
-                
-                # Get highlight timestamps - we add a different prompt for each short to get variety
-                start, stop = GetHighlight(trans_text + f" (Generate highlight {i+1}, different from previous ones)")
-                if start == 0 or stop == 0:
-                    # Skip this highlight but continue with others
-                    print(f"Error in getting highlight {i+1}, skipping")
+            # Get word-level timestamps for captions (reuses cached Whisper model)
+            transcription_with_words = None
+            if video_processing.add_captions:
+                print("Getting word-level timestamps for captions...")
+                transcription_with_words = transcribeAudioWithWordTimestamps(audio)
+                if transcription_with_words:
+                    print(f"Got {len(transcription_with_words)} segments with word timestamps")
+            
+            # Get all highlights in one call for better distinctness
+            num_shorts = video_processing.num_shorts
+            highlights = GetMultipleHighlights(trans_text, num_highlights=num_shorts)
+            print(f"Received {len(highlights)} highlights: {highlights}")
+
+            if not highlights:
+                video_processing.error_message = "Could not identify any highlights in the video"
+                video_processing.status = 'FAILED'
+                video_processing.save()
+                return
+
+            for i, (start, stop) in enumerate(highlights):
+                print(f"Processing highlight {i+1}/{len(highlights)}: {start}s - {stop}s")
+
+                if start == 0 and stop == 0:
+                    print(f"Invalid highlight {i+1}, skipping")
                     continue
-                    
-                # Create output paths
-                output = f"media/Out_{i}.mp4"
-                
-                # Crop video to highlight section
+
+                output = f"media/Out_{video_processing_id}_{i}.mp4"
                 crop_video(vid, output, start, stop)
-                
-                # Crop to vertical
-                cropped = f"media/cropped_{i}.mp4"
-                crop_to_vertical(output, cropped)
-                
-                # Combine videos
+
                 final_path = f"media/final_{video_processing_id}_{i}.mp4"
-                combine_videos(output, cropped, final_path)
-                
-                # Add captions to the video if enabled
+
+                if video_processing.crop_to_portrait:
+                    cropped = f"media/cropped_{video_processing_id}_{i}.mp4"
+                    crop_to_vertical(output, cropped)
+                    combine_videos(output, cropped, final_path)
+                else:
+                    letterbox_to_portrait(output, final_path)
+
                 if video_processing.add_captions:
                     try:
                         captioned_path = f"media/captioned/final_{video_processing_id}_{i}_captioned.mp4"
-                        
-                        # Generate captions using the local Whisper model for better accuracy
+
+                        clip_segments = None
+                        if transcription_with_words:
+                            clip_segments = extract_segments_for_clip(transcription_with_words, start, stop)
+                            if clip_segments:
+                                print(f"Using pre-computed transcription ({len(clip_segments)} segments) - skipping re-transcription")
+                            else:
+                                print("No matching segments found, will transcribe the clip")
+
                         add_captions(
                             final_path,
                             captioned_path,
-                            font="PoetsenOne-Regular.ttf",
-                            font_size=30,
+                            font="PlayfairDisplay-VariableFont_wght.ttf",
+                            font_size=110,
                             font_color="white",
                             stroke_width=2,
                             stroke_color="black",
@@ -199,11 +263,10 @@ def process_video_task(video_processing_id):
                             padding=40,
                             shadow_strength=1.0,
                             shadow_blur=0.1,
-                            use_local_whisper=True,
+                            segments=clip_segments,
                             print_info=True
                         )
-                        
-                        # Use the captioned video if it was created successfully
+
                         if os.path.exists(captioned_path):
                             final_path = captioned_path
                             print(f"Successfully added captions to short {i+1}")
@@ -213,13 +276,11 @@ def process_video_task(video_processing_id):
                         print(f"Error adding captions to short {i+1}: {str(e)}, using original video")
                 else:
                     print(f"Captions disabled for this processing task, skipping caption generation")
-                
-                # Upload to Cloudinary
+
                 upload_result = upload_to_cloudinary(final_path, f"user_{video_processing.username}_{i}")
                 if upload_result:
-                    # Add this URL to the list
                     video_processing.add_cloudinary_url(upload_result['url'], upload_result['public_id'])
-                    print(f"Uploaded short {i+1}/{video_processing.num_shorts} to Cloudinary: {upload_result['url']}")
+                    print(f"Uploaded short {i+1}/{len(highlights)} to Cloudinary: {upload_result['url']}")
                 else:
                     print(f"Failed to upload short {i+1} to Cloudinary, continuing with others")
             
@@ -413,8 +474,8 @@ def process_dubbing_task(dubbing_id):
                 add_captions(
                     dubbed_video_path,
                     captioned_path,
-                    font="PoetsenOne-Regular.ttf",
-                    font_size=30,
+                    font="PlayfairDisplay-VariableFont_wght.ttf",
+                    font_size=110,
                     font_color="white",
                     stroke_width=2,
                     stroke_color="black",

@@ -1,4 +1,5 @@
 import cv2
+import subprocess
 import numpy as np
 from moviepy.editor import *
 from Components.Speaker import detect_faces_and_speakers, Frames
@@ -129,6 +130,40 @@ def combine_videos(video_with_audio, video_without_audio, output_filename):
     except Exception as e:
         print(f"Error combining video and audio: {str(e)}")
 
+
+
+def letterbox_to_portrait(input_path, output_path, target_width=1080, target_height=1920):
+    """
+    Place a landscape video centered in a 9:16 portrait frame with black bars.
+    Uses ffmpeg directly for speed (no re-encode of the video stream where possible).
+    """
+    print(f"Letterboxing {input_path} to {target_width}x{target_height}")
+    try:
+        # Scale video so width = target_width, then pad to target_height with black
+        vf = (
+            f"scale={target_width}:-2,"
+            f"pad={target_width}:{target_height}:(ow-iw)/2:(oh-ih)/2:black"
+        )
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", input_path,
+            "-vf", vf,
+            "-c:v", "libx264",
+            "-preset", "fast",
+            "-crf", "23",
+            "-c:a", "aac",
+            "-b:a", "128k",
+            output_path,
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"ffmpeg letterbox error: {result.stderr[-500:]}")
+            return None
+        print(f"Letterboxed video saved to {output_path}")
+        return output_path
+    except Exception as e:
+        print(f"Error in letterbox_to_portrait: {e}")
+        return None
 
 
 if __name__ == "__main__":

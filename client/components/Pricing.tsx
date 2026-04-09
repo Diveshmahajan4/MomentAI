@@ -134,7 +134,7 @@ export default function Pricing() {
                 <CardContent className="space-y-4">
                   <div className="space-y-3">
                     <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                      What's included:
+                      What&apos;s included:
                     </h4>
                     <ul className="space-y-2">
                       {plan.features.map((feature) => (

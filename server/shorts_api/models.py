@@ -24,6 +24,7 @@ class VideoProcessing(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     add_captions = models.BooleanField(default=True)
+    crop_to_portrait = models.BooleanField(default=True)
     
     def __str__(self):
         return f"Video Processing: {self.username} - {self.youtube_url} - {self.status}"

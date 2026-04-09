@@ -301,46 +301,37 @@ function TranslatePageContent() {
 
   return (
     <SidebarProvider>
-      <div className="grid h-screen w-full overflow-hidden lg:grid-cols-[280px_1fr]">
-        <AppSidebar 
-          user={parsedUser}
-          uploadedVideos={userDubbings.map((dubbing) => ({
-            id: parseInt(dubbing.id),
-            name: `${dubbing.source_language} to ${dubbing.target_language}`,
-            date: new Date(dubbing.created_at).toLocaleDateString(),
-          }))}
-          className="hidden border-r lg:block" 
-        />
-        <div className="flex h-screen flex-col overflow-auto">
-          <header className="sticky top-0 z-10 flex h-[57px] items-center gap-1 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 lg:px-8 lg:py-4">
-            <SidebarTrigger />
-            <div className="w-full flex-1">
-              <h1 className="text-xl font-semibold tracking-tight">Translation & Dubbing</h1>
-            </div>
-          </header>
-          <main className="flex flex-1 flex-col gap-4 p-4 sm:gap-8 sm:p-6 lg:p-8">
-            <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink>
-                      <Link href="/dashboard">Dashboard</Link>
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>Translation</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
-              <Button size="sm" variant="outline" asChild>
+      <AppSidebar user={parsedUser}/>
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b">
+          <div className="flex items-center gap-2 px-4 w-full">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="mr-2 h-4" />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem className="hidden md:block">
+                  <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="hidden md:block" />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>Dubbing</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+            <div className="ml-auto">
+              <Button variant="ghost" size="sm" asChild>
                 <Link href="/translate/history">
                   <History className="mr-2 h-4 w-4" />
                   View History
                 </Link>
               </Button>
             </div>
-            <Separator />
+          </div>
+        </header>
+        
+        <div className="flex flex-1 flex-col gap-6 p-6">
+          <div className="mx-auto w-full max-w-3xl">
+            <h1 className="mb-6 text-3xl font-bold tracking-tight">Translation & Dubbing</h1>
             <div className="grid gap-6 md:grid-cols-2">
               <div>
                 <TranslationForm 
@@ -355,56 +346,50 @@ function TranslatePageContent() {
                 />
               </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {userDubbings
-                .filter(dubbing => dubbing.status === 'COMPLETED')
-                .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-                .slice(0, 4)
-                .map(dubbing => (
-                  <Link 
-                    key={dubbing.id} 
-                    href={`/translate?id=${dubbing.id}`}
-                    className="block overflow-hidden rounded-lg border bg-background p-2 transition-colors hover:bg-accent/50"
-                  >
-                    <div className="relative aspect-video overflow-hidden rounded-md bg-muted">
-                      {dubbing.cloudinary_urls && dubbing.cloudinary_urls.length > 0 && (
-                        <div className="relative h-full w-full">
-                          <video 
-                            src={dubbing.cloudinary_urls[0].url}
-                            className="object-cover"
-                            poster={`https://res.cloudinary.com/demo/video/upload/w_700/q_auto/l_play,w_100/fl_layer_apply,g_center/${dubbing.cloudinary_urls[0].public_id}.jpg`}
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <Globe className="h-8 w-8 text-white opacity-80" />
-                          </div>
+            {userDubbings.filter(d => d.status === 'COMPLETED').length > 0 && (
+              <div className="mt-6">
+                <h2 className="mb-4 text-lg font-semibold">Recent Translations</h2>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  {userDubbings
+                    .filter(dubbing => dubbing.status === 'COMPLETED')
+                    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+                    .slice(0, 4)
+                    .map(dubbing => (
+                      <Link 
+                        key={dubbing.id} 
+                        href={`/translate?id=${dubbing.id}`}
+                        className="block overflow-hidden rounded-lg border bg-background p-2 transition-colors hover:bg-accent/50"
+                      >
+                        <div className="relative aspect-video overflow-hidden rounded-md bg-muted">
+                          {dubbing.cloudinary_urls && dubbing.cloudinary_urls.length > 0 && (
+                            <div className="relative h-full w-full">
+                              <video 
+                                src={dubbing.cloudinary_urls[0].url}
+                                className="object-cover"
+                                poster={`https://res.cloudinary.com/demo/video/upload/w_700/q_auto/l_play,w_100/fl_layer_apply,g_center/${dubbing.cloudinary_urls[0].public_id}.jpg`}
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <Globe className="h-8 w-8 text-white opacity-80" />
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    <div className="p-2">
-                      <h3 className="line-clamp-1 text-sm font-medium">
-                        {dubbing.source_language} → {dubbing.target_language}
-                      </h3>
-                      <p className="line-clamp-1 text-xs text-muted-foreground">
-                        {new Date(dubbing.updated_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-            </div>
-          </main>
+                        <div className="p-2">
+                          <h3 className="line-clamp-1 text-sm font-medium">
+                            {dubbing.source_language} → {dubbing.target_language}
+                          </h3>
+                          <p className="line-clamp-1 text-xs text-muted-foreground">
+                            {new Date(dubbing.updated_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        <SidebarInset className="hidden lg:block">
-          <AppSidebar 
-            user={parsedUser}
-            uploadedVideos={userDubbings.map((dubbing) => ({
-              id: parseInt(dubbing.id),
-              name: `${dubbing.source_language} to ${dubbing.target_language}`,
-              date: new Date(dubbing.created_at).toLocaleDateString(),
-            }))}
-            className="border-r" 
-          />
-        </SidebarInset>
-      </div>
+      </SidebarInset>
     </SidebarProvider>
   )
 }
